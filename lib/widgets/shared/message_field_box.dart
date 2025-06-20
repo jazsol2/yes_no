@@ -1,33 +1,47 @@
 import 'package:flutter/material.dart';
 
 class MessageFieldBox extends StatelessWidget {
-  const MessagefieldBox ({Key? key}): super(key: key);
-  
-  @override
-  Widget build(BuildContext context){
+  final ValueChanged<String> onValue;
+  const MessageFieldBox({Key? key, required this.onValue}) : super(key: key);
 
-    final textController;
+  @override
+  Widget build(BuildContext context) {
+    final textController = TextEditingController();
 
     final FocusNode focusNode = FocusNode();
-    
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:964914843.
-    final OutlineInputBorder outlineInputBorder = OutlineInputBorder(
+
+    final outlineInputBorder = UnderlineInputBorder(
+      borderSide: BorderSide(color: Colors.transparent),
       borderRadius: BorderRadius.circular(40),
-      borderSide: const BorderSide(
-        color: Colors.transparent,
-      ),
     );
-    
-    final InputDecoration = InputDecoration(
-      hintText: 'Debes terminar tu mensaje con un "? "?"',
+
+    final inputDecoration = InputDecoration(
+      hintText: 'Debes terminar tu mensaje con un "?"',
       enabledBorder: outlineInputBorder,
       focusedBorder: outlineInputBorder,
       filled: true,
-      suffixIcon: IconButton
-        icon: Icon(icon.send_outlined)
+      suffixIcon: IconButton(
+        icon: Icon(Icons.send_outlined),
+        onPressed: () {
+          final textValue = textController.value.text;
+          textController.clear();
+          onValue(textValue);
+        },
+      ),
+    );
 
-    return TexFormfield(
-      child: null,
+    return TextFormField(
+      onTapOutside: (event) {
+        focusNode.unfocus();
+      },
+      controller: textController,
+      decoration: inputDecoration,
+      focusNode: focusNode,
+      onFieldSubmitted: (value) {
+        textController.clear();
+        focusNode.requestFocus();
+        onValue(value);
+      },
     );
   }
 }
