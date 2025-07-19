@@ -1,75 +1,58 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:myapp/providers/client_provider.dart';
+import 'package:myapp/screens/clients/client_form_screen.dart';
+import 'package:provider/provider.dart';
 
-class ClientesScreen extends StatefulWidget {
-  const ClientesScreen({super.key});
+class ClienteListScreen extends StatefulWidget {
+  const ClienteListScreen({super.key});
 
   @override
-  State<ClientesScreen> createState() => _ClientesScreenState();
+  State<ClienteListScreen> createState() => _ClienteListScreenState();
 }
 
-class _ClientesScreenState extends State<ClientesScreen> {
+class _ClienteListScreenState extends State<ClienteListScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ClienteProvider>(context, listen: false).fetchClientes();
-    });
+    Provider.of<ClienteProvider>(context, listen: false).loadClientes();
   }
 
   @override
   Widget build(BuildContext context) {
     final clienteProvider = Provider.of<ClienteProvider>(context);
-    final clientes = clienteProvider.clientes;
-    final isLoading = clienteProvider.isLoading;
-    final error = clienteProvider.error;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Clientes')),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-              ? Center(child: Text('Error: $error'))
-              : ListView.builder(
-                  itemCount: clientes.length,
-                  itemBuilder: (context, index) {
-                    final cliente = clientes[index];
-                    return ListTile(
-                      title: Text('${cliente.nombre} ${cliente.apellido}'),
-                      subtitle: Text('Email: ${cliente.email}'),
-                      trailing: Switch(
-                        value: cliente.isActive,
-                        onChanged: (value) async {
-                          try {
-                            await clienteProvider.deactivateCliente(cliente.id!);
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        },
-                      ),
-                      onTap: () async {
-                        final updated = await context.push<bool>(
-                          '/clientes/form',
-                          extra: cliente,
-                        );
-                        if (updated == true) {
-                          clienteProvider.fetchClientes();
-                        }
-                      },
-                    );
-                  },
-                ),
+      body: ListView.builder(
+        itemCount: clienteProvider.clientes.length,
+        itemBuilder: (context, index) {
+          final cliente = clienteProvider.clientes[index];
+          return ListTile(
+            title: Text('${cliente.nombre} ${cliente.apellido}'),
+            subtitle: Text(cliente.email),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ClienteFormScreen(cliente: cliente),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
-        onPressed: () async {
-          final created = await context.push<bool>('/clientes/form');
-          if (created == true) {
-            clienteProvider.fetchClientes();
-          }
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ClienteFormScreen(),
+            ),
+          );
         },
       ),
     );

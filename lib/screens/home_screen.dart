@@ -1,51 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:myapp/screens/users/user_list_screen.dart';
-
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final List<_HomeCard> cards = [
+      _HomeCard(label: 'Usuarios', route: '/usuarios'),
+      _HomeCard(label: 'Clientes', route: '/clientes'),
+      _HomeCard(label: 'Productos', route: '/productos'),
+      _HomeCard(label: 'Pedidos', route: '/pedidos'),
+    ];
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Menú Principal'),
-      ),
-      body: Padding(
+      appBar: AppBar(title: const Text('Inicio')),
+      body: GridView.count(
         padding: const EdgeInsets.all(16),
-        child: GridView.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          children: [
-            ElevatedButton.icon(
-              icon: Icon(Icons.person),
-              label: Text('Usuarios'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => UserScreen()),
-                );
-              },
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        children: cards.map((card) => card).toList(),
+      ),
+    );
+  }
+}
+
+class _HomeCard extends StatelessWidget {
+  final String label;
+  final String route;
+
+  const _HomeCard({required this.label, required this.route});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(route),
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 4,
+        color: Colors.blueAccent,
+        child: Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            ElevatedButton(
-              onPressed: () => context.go('/clientes'),
-              child: const Text('Clientes'),
-            ),
-            ElevatedButton(
-              onPressed: () => context.go('/usuarios'),
-              child: const Text('Usuarios'),
-            ),
-            ElevatedButton(
-              onPressed: () => context.go('/productos'),
-              child: const Text('Productos'),
-            ),
-            ElevatedButton(
-              onPressed: () => context.go('/pedidos'),
-              child: const Text('Pedidos'),
-            ),
-          ],
+          ),
         ),
       ),
     );

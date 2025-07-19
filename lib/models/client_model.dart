@@ -15,25 +15,7 @@ class Cliente {
     this.isActive = true,
   });
 
-  // 👇 Aquí agregamos copyWith
-  Cliente copyWith({
-    int? id,
-    String? nombre,
-    String? apellido,
-    String? email,
-    String? telefono,
-    bool? isActive,
-  }) {
-    return Cliente(
-      id: id ?? this.id,
-      nombre: nombre ?? this.nombre,
-      apellido: apellido ?? this.apellido,
-      email: email ?? this.email,
-      telefono: telefono ?? this.telefono,
-      isActive: isActive ?? this.isActive,
-    );
-  }
-
+  // Convertir JSON a Cliente (desde backend)
   factory Cliente.fromJson(Map<String, dynamic> json) {
     return Cliente(
       id: json['id'],
@@ -45,6 +27,7 @@ class Cliente {
     );
   }
 
+  // Convertir Cliente a JSON (para enviar al backend)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,

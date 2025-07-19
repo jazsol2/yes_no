@@ -2,73 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:myapp/models/client_model.dart';
 import 'package:myapp/services/client_service.dart';
 
-class ClienteProvider with ChangeNotifier {
+class ClienteProvider extends ChangeNotifier {
   final ClienteService _clienteService = ClienteService();
-
   List<Cliente> _clientes = [];
-  bool _isLoading = false;
-  String? _error;
 
   List<Cliente> get clientes => _clientes;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
 
-  Future<void> fetchClientes() async {
-    _isLoading = true;
-    _error = null;
+  // Carga la lista de clientes desde el backend
+  Future<void> loadClientes() async {
+    _clientes = await _clienteService.getClientes();
     notifyListeners();
-
-    try {
-      _clientes = await _clienteService.getClientes();
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
-  Future<void> createCliente(Cliente cliente) async {
-    try {
-      final nuevo = await _clienteService.createCliente(cliente);
-      _clientes.add(nuevo);
-      notifyListeners();
-    } catch (e) {
-      _error = e.toString();
-      rethrow;
-    }
+  // Agrega un nuevo cliente
+  Future<void> addCliente(Cliente cliente) async {
+    await _clienteService.createCliente(cliente);
+    await loadClientes();  // refresca la lista después de agregar
   }
 
+  // Actualiza un cliente existente
   Future<void> updateCliente(Cliente cliente) async {
-    try {
-      await _clienteService.updateCliente(cliente);
-      final index = _clientes.indexWhere((c) => c.id == cliente.id);
-      if (index != -1) {
-        _clientes[index] = cliente;
-        notifyListeners();
-      }
-    } catch (e) {
-      _error = e.toString();
-      rethrow;
-    }
+    await _clienteService.updateCliente(cliente);
+    await loadClientes();  // refresca la lista después de actualizar
   }
 
-  Future<void> deactivateCliente(int id) async {
-    final index = _clientes.indexWhere((c) => c.id == id);
-    if (index == -1) return;
-
-    final original = _clientes[index];
-
-    try {
-      _clientes[index] = original.copyWith(isActive: false);
-      notifyListeners();
-
-      await _clienteService.deactivateCliente(id);
-    } catch (e) {
-      _clientes[index] = original;
-      _error = e.toString();
-      notifyListeners();
-      rethrow;
-    }
+  // Desactiva (elimina lógico) un cliente por id
+  Future<void> deleteCliente(int id) async {
+    await _clienteService.desactivarCliente(id);
+    await loadClientes();  // refresca la lista después de eliminar
   }
 }
+

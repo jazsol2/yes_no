@@ -1,102 +1,141 @@
-// ignore_for_file: library_private_types_in_public_api
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:myapp/models/product_model.dart';
-import 'package:myapp/services/product_service.dart';
+import 'package:myapp/providers/product_provider.dart';
+import 'package:go_router/go_router.dart';
 
-class ProductoForm extends StatefulWidget {
+class ProductoFormScreen extends StatefulWidget {
   final Producto? producto;
 
-  const ProductoForm({super.key, this.producto, int? productoId});
+  const ProductoFormScreen({this.producto, super.key});
 
   @override
-  _ProductoFormState createState() => _ProductoFormState();
+  State<ProductoFormScreen> createState() => _ProductoFormScreenState();
 }
 
-class _ProductoFormState extends State<ProductoForm> {
+class _ProductoFormScreenState extends State<ProductoFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ProductoService productoService = ProductoService();
 
-  late TextEditingController _nombreController;
-  late TextEditingController _precioController;
-  late TextEditingController _descripcionController;
-  late TextEditingController _stockController;
+  late TextEditingController nombreCtrl;
+  late TextEditingController precioCtrl;
+  late TextEditingController descripcionCtrl;
+  late TextEditingController stockCtrl;
+  bool isActive = true;
+  bool isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _nombreController = TextEditingController(text: widget.producto?.nombre ?? '');
-    _precioController = TextEditingController(text: widget.producto?.precio.toString() ?? '');
-    _descripcionController = TextEditingController(text: widget.producto?.descripcion ?? '');
-    _stockController = TextEditingController(text: widget.producto?.stock.toString() ?? '');
+    nombreCtrl = TextEditingController(text: widget.producto?.nombre ?? '');
+    precioCtrl = TextEditingController(text: widget.producto?.precio.toString() ?? '');
+    descripcionCtrl = TextEditingController(text: widget.producto?.descripcion ?? '');
+    stockCtrl = TextEditingController(text: widget.producto?.stock.toString() ?? '');
+    isActive = widget.producto?.isActive ?? true;
   }
 
-  @override
-  void dispose() {
-    _nombreController.dispose();
-    _precioController.dispose();
-    _descripcionController.dispose();
-    _stockController.dispose();
-    super.dispose();
-  }
+  Future<void> saveProducto() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  Future<void> _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final nuevoProducto = Producto(
-        id: widget.producto?.id ?? 0,
-        nombre: _nombreController.text,
-        precio: double.parse(_precioController.text),
-        descripcion: _descripcionController.text,
-        stock: int.parse(_stockController.text),
-        isActive: widget.producto?.isActive ?? true,
-      );
+    setState(() => isSaving = true);
 
+    final producto = Producto(
+      id: widget.producto?.id,
+      nombre: nombreCtrl.text.trim(),
+      precio: double.tryParse(precioCtrl.text.trim()) ?? 0,
+      descripcion: descripcionCtrl.text.trim(),
+      stock: int.tryParse(stockCtrl.text.trim()) ?? 0,
+      isActive: isActive,
+    );
+
+    bool ok = false;
+
+    try {
+      final productoProvider = context.read<ProductoProvider>();
       if (widget.producto == null) {
-        await productoService.createProducto(nuevoProducto);
+        await productoProvider.addProducto(producto);
       } else {
-        await productoService.updateProducto(nuevoProducto.id, nuevoProducto);
+        await productoProvider.updateProducto(producto);
       }
+      ok = true;
+    } catch (e) {
+      ok = false;
+    }
 
-      Navigator.pop(context, true);
+    setState(() => isSaving = false);
+
+    if (ok) {
+      context.pop(true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al guardar producto')),
+      );
     }
   }
 
   @override
+  void dispose() {
+    nombreCtrl.dispose();
+    precioCtrl.dispose();
+    descripcionCtrl.dispose();
+    stockCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isEdit = widget.producto != null;
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.producto == null ? 'Nuevo Producto' : 'Editar Producto')),
+      appBar: AppBar(title: Text(isEdit ? 'Editar Producto' : 'Nuevo Producto')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
               TextFormField(
-                controller: _nombreController,
+                controller: nombreCtrl,
                 decoration: const InputDecoration(labelText: 'Nombre'),
-                validator: (value) => value!.isEmpty ? 'Ingrese un nombre' : null,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Ingrese el nombre' : null,
               ),
               TextFormField(
-                controller: _precioController,
+                controller: precioCtrl,
                 decoration: const InputDecoration(labelText: 'Precio'),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (value) => value!.isEmpty ? 'Ingrese un precio' : null,
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Ingrese el precio';
+                  if (double.tryParse(v) == null) return 'Precio inválido';
+                  return null;
+                },
               ),
               TextFormField(
-                controller: _descripcionController,
+                controller: descripcionCtrl,
                 decoration: const InputDecoration(labelText: 'Descripción'),
+                maxLines: 3,
               ),
               TextFormField(
-                controller: _stockController,
+                controller: stockCtrl,
                 decoration: const InputDecoration(labelText: 'Stock'),
                 keyboardType: TextInputType.number,
-                validator: (value) => value!.isEmpty ? 'Ingrese el stock' : null,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Ingrese el stock';
+                  if (int.tryParse(v) == null) return 'Stock inválido';
+                  return null;
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Activo'),
+                value: isActive,
+                onChanged: (v) => setState(() => isActive = v),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _submit,
-                child: const Text('Guardar'),
-              ),
+              isSaving
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: saveProducto,
+                      child: const Text('Guardar'),
+                    ),
             ],
           ),
         ),

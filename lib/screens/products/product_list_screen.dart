@@ -1,20 +1,18 @@
-// ignore_for_file: library_private_types_in_public_api
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:myapp/providers/product_provider.dart';
 import 'package:myapp/models/product_model.dart';
-import 'package:myapp/screens/products/product_form_screen.dart';
-import 'package:myapp/services/product_service.dart';
+import 'package:go_router/go_router.dart';
 
-class ProductosScreen extends StatefulWidget {
-  const ProductosScreen({super.key});
+class ProductoListScreen extends StatefulWidget {
+  const ProductoListScreen({super.key});
 
   @override
-  _ProductosScreenState createState() => _ProductosScreenState();
+  State<ProductoListScreen> createState() => _ProductoListScreenState();
 }
 
-class _ProductosScreenState extends State<ProductosScreen> {
-  final ProductoService productoService = ProductoService();
-  List<Producto> productos = [];
+class _ProductoListScreenState extends State<ProductoListScreen> {
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -23,52 +21,61 @@ class _ProductosScreenState extends State<ProductosScreen> {
   }
 
   Future<void> _loadProductos() async {
-    final data = await productoService.getProductos();
+    await context.read<ProductoProvider>().loadProductos();
     setState(() {
-      productos = data;
+      isLoading = false;
     });
-  }
-
-  void _goToForm({Producto? producto}) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProductoForm(producto: producto),
-      ),
-    );
-    if (result == true) {
-      _loadProductos();
-    }
-  }
-
-  void _toggleEstado(Producto producto) async {
-    await productoService.deactivateProducto(producto.id);
-    _loadProductos();
   }
 
   @override
   Widget build(BuildContext context) {
+    final productos = context.watch<ProductoProvider>().productos;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Productos')),
-      body: ListView.builder(
-        itemCount: productos.length,
-        itemBuilder: (context, index) {
-          final p = productos[index];
-          return ListTile(
-            title: Text(p.nombre),
-            subtitle: Text('Precio: \$${p.precio.toStringAsFixed(2)} - Stock: ${p.stock}'),
-            trailing: IconButton(
-              icon: Icon(p.isActive ? Icons.check_circle : Icons.cancel, color: p.isActive ? Colors.green : Colors.red),
-              onPressed: () => _toggleEstado(p),
-            ),
-            onTap: () => _goToForm(producto: p),
-          );
-        },
+      appBar: AppBar(
+        title: const Text('Productos'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              context.push('/productos/form');
+            },
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _goToForm(),
-        child: const Icon(Icons.add),
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : productos.isEmpty
+              ? const Center(child: Text('No hay productos'))
+              : ListView.builder(
+                  itemCount: productos.length,
+                  itemBuilder: (context, index) {
+                    final producto = productos[index];
+                    return ListTile(
+                      title: Text(producto.nombre),
+                      subtitle: Text('\$${producto.precio.toStringAsFixed(2)}'),
+                      trailing: Switch(
+                        value: producto.isActive,
+                        onChanged: (val) async {
+                          // Puedes implementar activar/desactivar aquí
+                          await context.read<ProductoProvider>().updateProducto(
+                            Producto(
+                              id: producto.id,
+                              nombre: producto.nombre,
+                              precio: producto.precio,
+                              descripcion: producto.descripcion,
+                              stock: producto.stock,
+                              isActive: val,
+                            ),
+                          );
+                        },
+                      ),
+                      onTap: () {
+                        context.push('/productos/form', extra: producto);
+                      },
+                    );
+                  },
+                ),
     );
   }
 }

@@ -1,83 +1,72 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:myapp/models/order_model.dart';
 import 'package:myapp/services/order_service.dart';
 
-
-class PedidoProvider with ChangeNotifier {
-  final PedidoService _pedidoService = PedidoService();
-
+class PedidoProvider extends ChangeNotifier {
+  final PedidoService _service = PedidoService();
   List<Pedido> _pedidos = [];
-  bool _isLoading = false;
-  String? _error;
 
   List<Pedido> get pedidos => _pedidos;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
 
   Future<void> fetchPedidos() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
     try {
-      _pedidos = await _pedidoService.getPedidos();
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
+      _pedidos = await _service.getPedidos();
       notifyListeners();
-    }
-  }
-
-  Future<void> createPedido(Pedido pedido) async {
-    try {
-      final ok = await _pedidoService.createPedidoWithDetails(pedido);
-      if (ok) {
-        _pedidos.add(pedido);
-        notifyListeners();
-      } else {
-        throw Exception('Error creando pedido');
-      }
     } catch (e) {
-      _error = e.toString();
-      rethrow;
+      if (kDebugMode) {
+        print('Error al obtener pedidos: $e');
+      }
     }
   }
 
-  Future<void> updatePedido(Pedido pedido) async {
+  Future<Pedido?> agregarPedido(Pedido pedido) async {
     try {
-      final ok = await _pedidoService.updatePedido(pedido);
+      final nuevo = await _service.createPedido(pedido);
+      _pedidos.add(nuevo);
+      notifyListeners();
+      return nuevo;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error al crear pedido: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> updatePedido(Pedido pedido) async {
+    try {
+      final actualizado = await _service.updatePedido(pedido.id!, pedido);
+      final index = _pedidos.indexWhere((p) => p.id == pedido.id);
+      if (index != -1) {
+        _pedidos[index] = actualizado;
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error al actualizar pedido: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> desactivarPedido(int id) async {
+    try {
+      final ok = await _service.desactivarPedido(id);
       if (ok) {
-        final index = _pedidos.indexWhere((p) => p.id == pedido.id);
+        final index = _pedidos.indexWhere((p) => p.id == id);
         if (index != -1) {
-          _pedidos[index] = pedido;
+          _pedidos[index] = _pedidos[index].copyWith(isActive: false);
           notifyListeners();
         }
-      } else {
-        throw Exception('Error actualizando pedido');
       }
+      return ok;
     } catch (e) {
-      _error = e.toString();
-      rethrow;
-    }
-  }
-
-  Future<void> deactivatePedido(int id) async {
-    final index = _pedidos.indexWhere((p) => p.id == id);
-    if (index == -1) return;
-
-    final originalPedido = _pedidos[index];
-    try {
-      _pedidos[index] = originalPedido.copyWith(isActive: false);
-      notifyListeners();
-
-      final ok = await _pedidoService.deactivatePedido(id);
-      if (!ok) throw Exception('Error desactivando pedido');
-    } catch (e) {
-      _pedidos[index] = originalPedido;
-      _error = e.toString();
-      notifyListeners();
-      rethrow;
+      if (kDebugMode) {
+        print('Error al desactivar pedido: $e');
+      }
+      return false;
     }
   }
 }

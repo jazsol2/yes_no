@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/models/client_model.dart';
-import 'package:myapp/services/client_service.dart';
+import 'package:myapp/providers/client_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class ClienteFormScreen extends StatefulWidget {
   final Cliente? cliente;
 
-  const ClienteFormScreen({this.cliente, super.key, int? clienteId});
+  const ClienteFormScreen({this.cliente, super.key});
 
   @override
   State<ClienteFormScreen> createState() => _ClienteFormScreenState();
@@ -14,7 +15,6 @@ class ClienteFormScreen extends StatefulWidget {
 
 class _ClienteFormScreenState extends State<ClienteFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ClienteService clienteService = ClienteService();
 
   late TextEditingController nombreCtrl;
   late TextEditingController apellidoCtrl;
@@ -39,7 +39,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
     setState(() => isSaving = true);
 
     final cliente = Cliente(
-      id: widget.cliente?.id,
+      id: widget.cliente?.id, // <-- aquí se permite null si es nuevo cliente
       nombre: nombreCtrl.text.trim(),
       apellido: apellidoCtrl.text.trim(),
       email: emailCtrl.text.trim(),
@@ -48,13 +48,15 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
     );
 
     bool ok = false;
+
     try {
+      final clienteProvider = context.read<ClienteProvider>();
       if (widget.cliente == null) {
-        final nuevoCliente = await clienteService.createCliente(cliente);
-        ok = nuevoCliente.id != null;
+        await clienteProvider.addCliente(cliente);
       } else {
-        ok = await clienteService.updateCliente(cliente);
+        await clienteProvider.updateCliente(cliente);
       }
+      ok = true;
     } catch (e) {
       ok = false;
     }
@@ -65,7 +67,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
       context.pop(true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar cliente')),
+        const SnackBar(content: Text('Error al guardar cliente')),
       );
     }
   }

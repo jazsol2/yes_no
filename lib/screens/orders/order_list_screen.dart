@@ -1,77 +1,85 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:myapp/providers/order_provider.dart';
 import 'package:provider/provider.dart';
 
-class PedidosScreen extends StatefulWidget {
-  const PedidosScreen({super.key});
+class PedidoScreen extends StatefulWidget {
+  const PedidoScreen({super.key});
 
   @override
-  State<PedidosScreen> createState() => _PedidosScreenState();
+  State<PedidoScreen> createState() => _PedidoScreenState();
 }
 
-class _PedidosScreenState extends State<PedidosScreen> {
+class _PedidoScreenState extends State<PedidoScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar pedidos al iniciar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<PedidoProvider>(context, listen: false).fetchPedidos();
-    });
+    context.read<PedidoProvider>().fetchPedidos();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pedidoProvider = Provider.of<PedidoProvider>(context);
+    final pedidoProvider = context.watch<PedidoProvider>();
     final pedidos = pedidoProvider.pedidos;
-    final isLoading = pedidoProvider.isLoading;
-    final error = pedidoProvider.error;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pedidos'),
+        title: const Text('Pedidos'),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: () => pedidoProvider.fetchPedidos(),
+            icon: const Icon(Icons.refresh),
+            onPressed: () => context.read<PedidoProvider>().fetchPedidos(),
           ),
         ],
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : error != null
-              ? Center(child: Text('Error: $error'))
-              : pedidos.isEmpty
-                  ? Center(child: Text('No hay pedidos'))
-                  : ListView.builder(
-                      itemCount: pedidos.length,
-                      itemBuilder: (context, index) {
-                        final pedido = pedidos[index];
-                        return ListTile(
-                          title: Text('Pedido #${pedido.id ?? "N/A"} - Cliente: ${pedido.clienteId}'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Estado: ${pedido.estado}'),
-                              Text('Total: \$${pedido.total.toStringAsFixed(2)}'),
-                              Text('Activo: ${pedido.isActive ? "Sí" : "No"}'),
-                              SizedBox(height: 4),
-                              Text('Detalles:'),
-                              ...pedido.detalles.map((d) => Text('- ${d.productoNombre}: ${d.cantidad}')),
-                            ],
-                          ),
-                          isThreeLine: true,
-                          trailing: Switch(
-                            value: pedido.isActive,
-                            onChanged: (value) {
-                              pedidoProvider.deactivatePedido(pedido.id!);
-                            },
-                          ),
-                          onTap: () {
-                            // Aquí puedes navegar a un formulario de edición de pedido
-                          },
-                        );
+      body: pedidos.isEmpty
+          ? const Center(child: Text('No hay pedidos registrados.'))
+          : ListView.builder(
+              itemCount: pedidos.length,
+              itemBuilder: (context, index) {
+                final pedido = pedidos[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    title: Text('Pedido #${pedido.id ?? '-'} - Cliente: ${pedido.clienteId}'),
+                    subtitle: Text('Total: \$${pedido.total.toStringAsFixed(2)} | Estado: ${pedido.estado}'),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) async {
+                        if (value == 'editar') {
+                          context.push('/pedidos/editar', extra: pedido);
+                        } else if (value == 'desactivar') {
+                          final ok = await pedidoProvider.desactivarPedido(pedido.id!);
+                          if (!mounted) return;
+                          if (ok) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Pedido desactivado')),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Error al desactivar pedido')),
+                            );
+                          }
+                        }
                       },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'editar',
+                          child: Text('Editar'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'desactivar',
+                          child: Text('Desactivar'),
+                        ),
+                      ],
                     ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/pedidos/nuevo'),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
