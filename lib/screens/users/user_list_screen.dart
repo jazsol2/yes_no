@@ -4,14 +4,14 @@ import 'package:myapp/providers/user_provider.dart';
 import 'package:myapp/screens/users/user_form_screen.dart';
 
 
-class UsuarioListScreen extends StatefulWidget {
-  const UsuarioListScreen({super.key});
+class UserScreen extends StatefulWidget {
+  const UserScreen ({super.key});
 
   @override
-  State<UsuarioListScreen> createState() => _UsuarioListScreenState();
+  State<UserScreen> createState() => _UserScreenState();
 }
 
-class _UsuarioListScreenState extends State<UsuarioListScreen> {
+class _UserScreenState extends State<UserScreen> {
   @override
   void initState() {
     super.initState();

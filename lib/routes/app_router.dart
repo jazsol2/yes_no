@@ -54,7 +54,7 @@ final GoRouter router = GoRouter(
     // USUARIOS
     GoRoute(
       path: '/usuarios',
-      builder: (context, state) => UsersScreen(),
+      builder: (context, state) => UserScreen(),
     ),
     GoRoute(
       path: '/usuarios/form',

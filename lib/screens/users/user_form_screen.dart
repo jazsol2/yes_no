@@ -8,7 +8,7 @@ import 'package:myapp/widgets/custom_text_field.dart';
 
 class UserFormScreen extends StatefulWidget {
   final User? user;
-  const UserFormScreen({super.key, this.user});
+  const UserFormScreen({super.key, this.user, int? usuarioId});
 
   @override
   State<UserFormScreen> createState() => _UserFormScreenState();
